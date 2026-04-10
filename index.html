@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>自动投资计算器</title>
+<style>
+body {
+    font-family: Arial;
+    max-width: 500px;
+    margin: 30px auto;
+    text-align: center;
+}
+input {
+    width: 90%;
+    padding: 10px;
+    margin: 8px 0;
+}
+button {
+    width: 95%;
+    padding: 12px;
+    background: black;
+    color: white;
+    border: none;
+}
+.card {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f5f5f5;
+}
+.green { color: green; }
+.orange { color: orange; }
+.red { color: red; }
+</style>
+</head>
+<body>
+<h2>📊 自动投资计算器</h2>
+<div class="card">
+<b>当前市场数据</b><br>
+CAPE：<span id="capeVal">加载中...</span><br>
+利率：<span id="rateVal">加载中...</span>
+</div>
+<input id="stock" placeholder="股票（万日元）">
+<input id="cash" placeholder="现金（万日元）">
+<div class="card" id="out"></div>
+<script>
+
+// 模拟API（现实中这些接口可以换成真实数据源）
+async function fetchData() {
+    // 模拟真实值（你可以以后换API）
+    let cape = 33;
+    let rate = 4.2;
+
+    document.getElementById("capeVal").innerText = cape;
+    document.getElementById("rateVal").innerText = rate + "%";
+
+    return {cape, rate};
+}
+
+let marketData = {};
+
+fetchData().then(data => {
+    marketData = data;
+});
+
+function calc(){
+let cape = marketData.cape;
+let rate = marketData.rate / 100;
+let stock = +document.getElementById("stock").value;
+let cash = +document.getElementById("cash").value;
+
+let alloc=0.7, invest=15, status="正常", color="orange";
+
+if(cape>30 && rate>0.04){
+    alloc=0.3; invest=5; status="高估"; color="red";
+}
+else if(cape<20){
+    alloc=0.9; invest=25; status="低估"; color="green";
+}
+
+let total=stock+cash;
+let target=total*alloc;
+
+let buy= stock<target ? Math.min(cash+invest,target-stock):0;
+
+document.getElementById("out").innerHTML=`
+<b class="${color}">市场状态：${status}</b><br><br>
+总资产：${total} 万<br>
+目标仓位：${alloc*100}%<br>
+本月投入：${invest} 万<br>
+建议买入：${buy.toFixed(2)} 万
+`;
+}
+
+</script>
+</body>
+</html>
+:::
