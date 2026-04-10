@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <title>投资策略计算器</title>
+
 <style>
 body {
     font-family: Arial;
     max-width: 700px;
     margin: 30px auto;
-    line-height: 1.6;
 }
 h2 { text-align: center; }
 
@@ -25,7 +25,6 @@ button {
     color: white;
     border: none;
     cursor: pointer;
-    margin-top: 10px;
 }
 
 .card {
@@ -37,61 +36,26 @@ button {
 .green { color: green; }
 .orange { color: orange; }
 .red { color: red; }
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
-
-td, th {
-    border: 1px solid #ccc;
-    padding: 8px;
-    text-align: center;
-}
 </style>
+
 </head>
+
 <body>
+
 <h2>📊 投资策略计算器</h2>
-<input id="cape" placeholder="CAPE（如 33）">
-<input id="rate" placeholder="利率 %（如 4.2）">
-<input id="stock" placeholder="股票（万日元）">
-<input id="cash" placeholder="现金（万日元）">
+
+<input id="cape" placeholder="CAPE">
+<input id="rate" placeholder="利率 %">
+<input id="stock" placeholder="股票（万）">
+<input id="cash" placeholder="现金（万）">
+
+<button type="button" onclick="calc()">计算</button>
+
 <div class="card" id="result">等待输入...</div>
-<!-- 逻辑说明 -->
-<div class="card">
-<h3>📌 策略逻辑</h3>
-<p>使用 CAPE + 利率 判断市场：</p>
-<ul>
-<li>高估：少投（5万），低仓位</li>
-<li>正常：15万，中仓位</li>
-<li>低估：25万，高仓位</li>
-<li>不卖股票，仅用现金调仓</li>
-</ul>
-</div>
-<!-- 9宫格 -->
-<div class="card">
-<h3>📊 决策矩阵</h3>
-<table>
-<tr><th>CAPE \\ 利率</th><th>&lt;2%</th><th>2-4%</th><th>&gt;4%</th></tr>
-<tr><td>&lt;20</td><td>25万</td><td>25万</td><td>15万</td></tr>
-<tr><td>20-25</td><td>25万</td><td>15万</td><td>10万</td></tr>
-<tr><td>25-30</td><td>15万</td><td>10万</td><td>5万</td></tr>
-<tr><td>&gt;30</td><td>10万</td><td>5万</td><td>5万</td></tr>
-</table>
-</div>
-<!-- 仓位 -->
-<div class="card">
-<h3>📈 仓位规则</h3>
-<ul>
-<li>低估：90% 股票</li>
-<li>正常：70%</li>
-<li>偏高：50%</li>
-<li>高估：30%</li>
-</ul>
-</div>
+
 <script>
 function calc() {
+
     const cape = parseFloat(document.getElementById("cape").value);
     const rate = parseFloat(document.getElementById("rate").value);
     const stock = parseFloat(document.getElementById("stock").value);
@@ -107,7 +71,6 @@ function calc() {
     let status = "正常";
     let color = "orange";
 
-    // 判断逻辑
     if (cape > 30 && rate > 4) {
         invest = 5;
         alloc = 0.3;
@@ -121,7 +84,7 @@ function calc() {
     } else if (cape >= 25 && rate > 4) {
         invest = 5;
         alloc = 0.3;
-        status = "偏高（利率压制）";
+        status = "偏高";
         color = "red";
     } else if (cape >= 25) {
         invest = 10;
@@ -138,15 +101,14 @@ function calc() {
         buy = Math.min(cash + invest, targetStock - stock);
     }
 
-    document.getElementById("result").innerHTML = `
-    <b class="${color}">市场状态：${status}</b><br><br>
-    总资产：${total} 万<br>
-    目标仓位：${(alloc*100).toFixed(0)}%<br>
-    本月投入：${invest} 万<br>
-    建议买入：${buy.toFixed(2)} 万
-    `;
+    document.getElementById("result").innerHTML =
+        "<b class='" + color + "'>市场状态：" + status + "</b><br><br>" +
+        "总资产：" + total + " 万<br>" +
+        "目标仓位：" + (alloc*100).toFixed(0) + "%<br>" +
+        "本月投入：" + invest + " 万<br>" +
+        "建议买入：" + buy.toFixed(2) + " 万";
 }
 </script>
+
 </body>
 </html>
-:::
