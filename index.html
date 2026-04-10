@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>自动投资计算器</title>
+<title>投资计算器</title>
 <style>
 body {
     font-family: Arial;
@@ -21,6 +21,7 @@ button {
     background: black;
     color: white;
     border: none;
+    cursor: pointer;
 }
 .card {
     margin-top: 20px;
@@ -33,65 +34,72 @@ button {
 </style>
 </head>
 <body>
-<h2>📊 自动投资计算器</h2>
-<div class="card">
-<b>当前市场数据</b><br>
-CAPE：<span id="capeVal">加载中...</span><br>
-利率：<span id="rateVal">加载中...</span>
-</div>
+<h2>📊 投资策略计算器</h2>
+<input id="cape" placeholder="CAPE（如 33）">
+<input id="rate" placeholder="利率 %（如 4.2）">
 <input id="stock" placeholder="股票（万日元）">
 <input id="cash" placeholder="现金（万日元）">
 <div class="card" id="out"></div>
 <script>
-
-// 模拟API（现实中这些接口可以换成真实数据源）
-async function fetchData() {
-    // 模拟真实值（你可以以后换API）
-    let cape = 33;
-    let rate = 4.2;
-
-    document.getElementById("capeVal").innerText = cape;
-    document.getElementById("rateVal").innerText = rate + "%";
-
-    return {cape, rate};
-}
-
-let marketData = {};
-
-fetchData().then(data => {
-    marketData = data;
-});
-
 function calc(){
-let cape = marketData.cape;
-let rate = marketData.rate / 100;
-let stock = +document.getElementById("stock").value;
-let cash = +document.getElementById("cash").value;
+let cape = parseFloat(document.getElementById("cape").value);
+let rate = parseFloat(document.getElementById("rate").value) / 100;
+let stock = parseFloat(document.getElementById("stock").value);
+let cash = parseFloat(document.getElementById("cash").value);
 
-let alloc=0.7, invest=15, status="正常", color="orange";
-
-if(cape>30 && rate>0.04){
-    alloc=0.3; invest=5; status="高估"; color="red";
-}
-else if(cape<20){
-    alloc=0.9; invest=25; status="低估"; color="green";
+if (isNaN(cape) || isNaN(rate) || isNaN(stock) || isNaN(cash)) {
+    document.getElementById("out").innerHTML = "请输入完整数值";
+    return;
 }
 
-let total=stock+cash;
-let target=total*alloc;
+let alloc = 0.7;
+let invest = 15;
+let status = "正常";
+let color = "orange";
 
-let buy= stock<target ? Math.min(cash+invest,target-stock):0;
+// 双指标逻辑
+if (cape > 30 && rate > 0.04) {
+    alloc = 0.3;
+    invest = 5;
+    status = "高估";
+    color = "red";
+} else if (cape < 20) {
+    alloc = 0.9;
+    invest = 25;
+    status = "低估";
+    color = "green";
+} else if (cape >= 25 && cape <= 30 && rate > 0.04) {
+    alloc = 0.3;
+    invest = 5;
+    status = "偏高（利率压制）";
+    color = "red";
+} else if (cape >= 20 && cape <= 25) {
+    alloc = 0.7;
+    invest = 15;
+    status = "正常";
+    color = "orange";
+}
 
-document.getElementById("out").innerHTML=`
+// 计算
+let total = stock + cash;
+let targetStock = total * alloc;
+
+let buy = 0;
+if (stock < targetStock) {
+    buy = Math.min(cash + invest, targetStock - stock);
+}
+
+// 输出
+document.getElementById("out").innerHTML = `
 <b class="${color}">市场状态：${status}</b><br><br>
 总资产：${total} 万<br>
-目标仓位：${alloc*100}%<br>
+目标股票仓位：${(alloc*100).toFixed(0)}%<br>
 本月投入：${invest} 万<br>
 建议买入：${buy.toFixed(2)} 万
 `;
 }
-
 </script>
 </body>
 </html>
 :::
+
