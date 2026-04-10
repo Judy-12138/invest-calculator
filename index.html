@@ -1,173 +1,188 @@
-7"}
 <!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<title>投资计算器</title>
-
+<title>投资系统</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-body {
-    font-family: Arial;
-    max-width: 700px;
-    margin: 20px auto;
-}
-h2 { text-align:center; }
-
-input, button {
-    width:100%;
-    padding:12px;
-    margin:8px 0;
-    font-size:16px;
-}
-
-button {
-    background:black;
-    color:white;
-    border:none;
-    cursor:pointer;
-}
-
-.card {
-    margin-top:20px;
-    padding:15px;
-    background:#f5f5f5;
-}
-
-.green{color:green;}
-.orange{color:orange;}
-.red{color:red;}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-}
-td,th{
-    border:1px solid #ccc;
-    padding:6px;
-    text-align:center;
-}
+body { font-family: Arial; max-width:900px; margin:20px auto;}
+input,button{width:100%;padding:10px;margin:6px 0;}
+button{background:black;color:white;border:none;}
+.card{margin-top:20px;padding:15px;background:#f5f5f5;}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;}
+.green{background:green;}
+.yellow{background:gold;}
+.orange{background:orange;}
+.red{background:red;}
 </style>
-
 </head>
-
 <body>
-
-<h2>📊 投资策略计算器</h2>
-
-<button type="button" onclick="loadRate()">📡 自动获取利率</button>
-
-<input id="cape" placeholder="CAPE（例如 33）">
-<input id="rate" placeholder="利率 %（例如 4.2）">
-<input id="stock" placeholder="股票（万）">
-<input id="cash" placeholder="现金（万）">
-
-<button type="button" onclick="calc()">👉 计算</button>
-
-<div class="card" id="result">等待输入...</div>
-
+<h2>📊 投资系统（完整版）</h2>
+<input id="cape" placeholder="CAPE">
+<input id="rate" placeholder="利率">
+<input id="stock" placeholder="股票">
+<input id="cash" placeholder="现金">
+<div class="card" id="result"></div>
 <!-- 决策矩阵 -->
 <div class="card">
-<h3>📊 投资决策矩阵</h3>
-<table>
-<tr><th>CAPE \ 利率</th><th><2%</th><th>2-4%</th><th>>4%</th></tr>
-<tr><td><20</td><td>25万</td><td>25万</td><td>15万</td></tr>
-<tr><td>20-25</td><td>25万</td><td>15万</td><td>10万</td></tr>
-<tr><td>25-30</td><td>15万</td><td>10万</td><td>5万</td></tr>
-<tr><td>>30</td><td>10万</td><td>5万</td><td>5万</td></tr>
+<h3>📊 决策矩阵</h3>
+<table border="1" width="100%">
+<tr><th>CAPE\利率</th><th>&lt;2%</th><th>2-4%</th><th>&gt;4%</th></tr>
+<tr>
+<td>&lt;20</td>
+<td><span class="dot green"></span>25万</td>
+<td><span class="dot green"></span>25万</td>
+<td><span class="dot yellow"></span>15万</td>
+</tr>
+<tr>
+<td>20-25</td>
+<td><span class="dot green"></span>25万</td>
+<td><span class="dot yellow"></span>15万</td>
+<td><span class="dot orange"></span>10万</td>
+</tr>
+<tr>
+<td>25-30</td>
+<td><span class="dot yellow"></span>15万</td>
+<td><span class="dot orange"></span>10万</td>
+<td><span class="dot red"></span>5万</td>
+</tr>
+<tr>
+<td>&gt;30</td>
+<td><span class="dot orange"></span>10万</td>
+<td><span class="dot red"></span>5万</td>
+<td><span class="dot red"></span>5万</td>
+</tr>
 </table>
+<p>
+<span class="dot green"></span>低估　
+<span class="dot yellow"></span>正常　
+<span class="dot orange"></span>偏高　
+<span class="dot red"></span>高估
+</p>
 </div>
-
-<!-- 仓位 -->
+<!-- 图表 -->
 <div class="card">
-<h3>📈 仓位规则</h3>
-<ul>
-<li>🟢 低估 → 90% 股票</li>
-<li>🟡 正常 → 70%</li>
-<li>🟠 偏高 → 50%</li>
-<li>🔴 高估 → 30%</li>
-</ul>
+<h3>📈 投资收益曲线</h3>
+<canvas id="portfolioChart"></canvas>
 </div>
-
+<div class="card">
+<h3>📊 利率曲线</h3>
+<canvas id="rateChart"></canvas>
+</div>
+<div class="card">
+<h3>📉 CAPE曲线（模拟）</h3>
+<canvas id="capeChart"></canvas>
+</div>
 <script>
 
-// ✅ 获取利率（已修复写法）
+// ✅ 利率API（已换key）
 async function loadRate(){
     try{
-        const url = "https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=9767bb73e374e7031f93d7e5553b17cd&file_type=json";
+        let url = "https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=271131e0378a5f9abaa7d465705f25ac&file_type=json";
+        let res = await fetch(url);
+        let data = await res.json();
 
-        const res = await fetch(url);
-        const data = await res.json();
+        let obs = data.observations;
+        let val;
 
-        let observations = data.observations;
-
-        // 找最后一个非 "." 的值
-        let rate = null;
-        for(let i = observations.length-1; i >= 0; i--){
-            if(observations[i].value !== "."){
-                rate = observations[i].value;
+        for(let i=obs.length-1;i>=0;i--){
+            if(obs[i].value !== "."){
+                val = obs[i].value;
                 break;
             }
         }
 
-        if(rate){
-            document.getElementById("rate").value = parseFloat(rate).toFixed(2);
-            alert("利率已更新");
-        }else{
-            alert("获取失败");
-        }
+        document.getElementById("rate").value = parseFloat(val).toFixed(2);
+
+        drawRateChart(obs.slice(-50));
 
     }catch(e){
-        alert("API错误，请手动输入");
-        console.log(e);
+        alert("API失败");
     }
 }
 
-
-// ✅ 计算逻辑（完全稳定版）
+// ✅ 核心计算
 function calc(){
+let cape = +capeInput.value;
+let rate = +rateInput.value;
+let stock = +stockInput.value;
+let cash = +cashInput.value;
 
-    const cape = parseFloat(document.getElementById("cape").value);
-    const rate = parseFloat(document.getElementById("rate").value);
-    const stock = parseFloat(document.getElementById("stock").value);
-    const cash = parseFloat(document.getElementById("cash").value);
+let invest=15,alloc=0.7,color="yellow",status="正常";
 
-    if(isNaN(cape)||isNaN(rate)||isNaN(stock)||isNaN(cash)){
-        document.getElementById("result").innerHTML = "❗请输入完整数值";
-        return;
-    }
+if(cape>30 && rate>4){invest=5;alloc=0.3;color="red";status="高估";}
+else if(cape<20){invest=25;alloc=0.9;color="green";status="低估";}
+else if(cape>=25){invest=10;alloc=0.5;color="orange";status="偏高";}
 
-    let invest=15,alloc=0.7,status="正常",color="orange";
+let total=stock+cash;
+let target=total*alloc;
+let buy = stock<target ? Math.min(cash+invest,target-stock):0;
 
-    if(cape>30 && rate>4){
-        invest=5;alloc=0.3;status="高估";color="red";
-    }
-    else if(cape<20){
-        invest=25;alloc=0.9;status="低估";color="green";
-    }
-    else if(cape>=25 && rate>4){
-        invest=5;alloc=0.3;status="偏高（利率压制）";color="red";
-    }
-    else if(cape>=25){
-        invest=10;alloc=0.5;status="偏高";color="orange";
-    }
+result.innerHTML=`${status}｜投入${invest}万｜买入${buy.toFixed(2)}万`;
 
-    const total = stock + cash;
-    const target = total * alloc;
-
-    let buy = 0;
-    if(stock < target){
-        buy = Math.min(cash + invest, target - stock);
-    }
-
-    document.getElementById("result").innerHTML =
-        "<b class='"+color+"'>市场状态："+status+"</b><br><br>" +
-        "总资产："+total+" 万<br>" +
-        "目标仓位："+(alloc*100).toFixed(0)+"%<br>" +
-        "本月投入："+invest+" 万<br>" +
-        "建议买入："+buy.toFixed(2)+" 万";
+drawPortfolio();
+drawCape();
 }
+
+// 📈 投资收益（模拟）
+function drawPortfolio(){
+let labels=[],data=[];
+let value=100;
+
+for(let i=0;i<50;i++){
+value*=1+ (Math.random()*0.02-0.01);
+labels.push(i);
+data.push(value);
+}
+
+new Chart(document.getElementById("portfolioChart"),{
+type:'line',
+data:{labels:labels,datasets:[{label:'资产',data:data}]}
+});
+}
+
+// 📊 利率图
+function drawRateChart(obs){
+let labels=[],data=[];
+
+obs.forEach(o=>{
+if(o.value !== "."){
+labels.push(o.date);
+data.push(o.value);
+}
+});
+
+new Chart(document.getElementById("rateChart"),{
+type:'line',
+data:{labels:labels,datasets:[{label:'利率',data:data}]}
+});
+}
+
+// 📉 CAPE图（模拟）
+function drawCape(){
+let labels=[],data=[];
+let v=20;
+
+for(let i=0;i<50;i++){
+v+=Math.random()*2-1;
+labels.push(i);
+data.push(v);
+}
+
+new Chart(document.getElementById("capeChart"),{
+type:'line',
+data:{labels:labels,datasets:[{label:'CAPE',data:data}]}
+});
+}
+
+// 修复id
+const capeInput=document.getElementById("cape");
+const rateInput=document.getElementById("rate");
+const stockInput=document.getElementById("stock");
+const cashInput=document.getElementById("cash");
+const result=document.getElementById("result");
 
 </script>
-
 </body>
-</ht
+</html>
+:::
