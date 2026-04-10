@@ -1,25 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>投资策略计算器</title>
+<style>
+body {
+    font-family: Arial;
+    max-width: 800px;
+    margin: 20px auto;
+}
+h2 { text-align:center; }
+
+input, button {
+    width:100%;
+    padding:10px;
+    margin:6px 0;
+}
+
+button {
+    background:black;
+    color:white;
+    border:none;
+    cursor:pointer;
+}
+
+.card {
+    margin-top:20px;
+    padding:15px;
+    background:#f5f5f5;
+}
+
+.green{color:green;}
+.orange{color:orange;}
+.red{color:red;}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+td,th{
+    border:1px solid #ccc;
+    padding:6px;
+    text-align:center;
+}
+</style>
+</head>
 <body>
-
-<h2>📊 投资策略计算器</h2>
-
-<input id="cape" value="33">
-<input id="rate" value="4.2">
-<input id="stock" value="100">
-<input id="cash" value="10">
-
-<!-- 强制可见按钮 -->
-<div style="margin-top:20px;">
-<button type="button" onclick="calc()" style="font-size:20px;">
-👉 点我计算
-</button>
+<h2>📊 投资策略计算器（自动版）</h2>
+<input id="cape" placeholder="CAPE">
+<input id="rate" placeholder="利率 %">
+<input id="stock" placeholder="股票（万）">
+<input id="cash" placeholder="现金（万）">
+<div class="card" id="result">等待输入...</div>
+<!-- 决策矩阵 -->
+<div class="card">
+<h3>📊 投资决策矩阵</h3>
+<table>
+<tr><th>CAPE \\ 利率</th><th>&lt;2%</th><th>2-4%</th><th>&gt;4%</th></tr>
+<tr><td>&lt;20</td><td>25万</td><td>25万</td><td>15万</td></tr>
+<tr><td>20-25</td><td>25万</td><td>15万</td><td>10万</td></tr>
+<tr><td>25-30</td><td>15万</td><td>10万</td><td>5万</td></tr>
+<tr><td>&gt;30</td><td>10万</td><td>5万</td><td>5万</td></tr>
+</table>
 </div>
-
-<div id="result" style="margin-top:20px;">等待输入...</div>
-
+<!-- 仓位逻辑 -->
+<div class="card">
+<h3>📈 仓位调整逻辑</h3>
+<ul>
+<li>🟢 低估：90% 股票（大举买入）</li>
+<li>🟡 正常：70% 股票（稳步定投）</li>
+<li>🟠 偏高：50% 股票（控制风险）</li>
+<li>🔴 高估：30% 股票（积累现金）</li>
+</ul>
+</div>
 <script>
+// 自动获取利率（真实API）
+async function loadData(){
+    try{
+        const res = await fetch("https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=YOUR_API_KEY&file_type=json");
+        const data = await res.json();
+        const latest = data.observations.pop().value;
+
+        document.getElementById("rate").value = parseFloat(latest).toFixed(2);
+
+        // CAPE暂用默认（你可以手动填或后续升级）
+        document.getElementById("cape").value = 33;
+
+        alert("已更新市场数据（利率）");
+    }catch(e){
+        alert("自动获取失败，请手动输入");
+    }
+}
+
+// 计算逻辑
 function calc(){
-    alert("按钮已点击");
+
+let cape = parseFloat(document.getElementById("cape").value);
+let rate = parseFloat(document.getElementById("rate").value);
+let stock = parseFloat(document.getElementById("stock").value);
+let cash = parseFloat(document.getElementById("cash").value);
+
+if(isNaN(cape)||isNaN(rate)||isNaN(stock)||isNaN(cash)){
+    result.innerHTML="请输入完整数值";
+    return;
+}
+
+let invest=15,alloc=0.7,status="正常",color="orange";
+
+if(cape>30 && rate>4){
+    invest=5;alloc=0.3;status="高估";color="red";
+}
+else if(cape<20){
+    invest=25;alloc=0.9;status="低估";color="green";
+}
+else if(cape>=25){
+    invest=10;alloc=0.5;status="偏高";color="orange";
+}
+
+let total=stock+cash;
+let target=total*alloc;
+
+let buy = stock<target ? Math.min(cash+invest,target-stock):0;
+
+result.innerHTML=`
+<b class="${color}">市场状态：${status}</b><br><br>
+总资产：${total} 万<br>
+目标仓位：${alloc*100}%<br>
+本月投入：${invest} 万<br>
+建议买入：${buy.toFixed(2)} 万
+`;
 }
 </script>
-
 </body>
+</html>
+:::
